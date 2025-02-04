@@ -1,40 +1,47 @@
-# Stage 1: Building the application
-FROM node:20-alpine AS builder
-
+# Stage 1: Dependencies
+FROM node:20-alpine AS deps
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
-
-# Install dependencies
+# Install ALL dependencies (including devDependencies)
 RUN npm install
 
-# Copy all other files
+# Stage 2: Builder
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Set environment variables
+ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV production
 
 # Build the application
 RUN npm run build
 
-# Stage 2: Running the application
+# Stage 3: Runner (final stage)
 FROM node:20-alpine AS runner
-
 WORKDIR /app
 
-# Set to production environment
 ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
 
-# Copy necessary files from builder
-COPY --from=builder /app/next.config.js ./
+# Add a non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy only necessary files
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# Install production dependencies only
-RUN npm install --production
+# Set correct permissions
+RUN chown -R nextjs:nodejs /app
 
-# Expose the port the app runs on
+USER nextjs
+
 EXPOSE 3000
 
-# Command to run the application
 CMD ["node", "server.js"] 

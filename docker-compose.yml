@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  nextjs:
+    container_name: nextjs_app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001 :3000"
+    environment:
+      - NODE_ENV=production
+      # Add any other environment variables your app needs
+      # - DATABASE_URL=your_database_url
+      # - API_KEY=your_api_key
+    restart: always
+    # If you need to mount volumes (e.g., for live updates in development)
+    # volumes:
+    #   - .:/app
+    #   - /app/node_modules
+    #   - /app/.next
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
